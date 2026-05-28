@@ -1,14 +1,13 @@
 """CrosswordAgent — 기사 어휘별로 B1/B1-B2 두 수준의 크로스워드 문장 쌍을 생성한다."""
 
-import json
 import logging
-import re
 from typing import Callable
 
 import anthropic
 
 from config import CLAUDE_MODEL, SYSTEM_PROMPT
 from models import ArticleResult, CrosswordSentencePair
+from agents.sub_agents.utils import parse_json
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +79,4 @@ Respond in this exact JSON format:
             system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
             messages=[{"role": "user", "content": prompt}],
         )
-        raw = message.content[0].text
-        raw = re.sub(r"```(?:json)?", "", raw).strip().rstrip("`").strip()
-        start, end = raw.find("{"), raw.rfind("}") + 1
-        if start != -1 and end > start:
-            raw = raw[start:end]
-        return json.loads(raw)
+        return parse_json(message.content[0].text)

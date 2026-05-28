@@ -7,15 +7,14 @@
   times  : 고등이상, 신문 격식체
 """
 
-import json
 import logging
-import re
 from typing import Callable
 
 import anthropic
 
 from config import ANTHROPIC_API_KEY, CLAUDE_MODEL, SYSTEM_PROMPT
 from models import ContentPackage
+from agents.sub_agents.utils import parse_json
 
 logger = logging.getLogger(__name__)
 
@@ -112,14 +111,4 @@ class TranslatorAgent:
             ],
             messages=[{"role": "user", "content": prompt}],
         )
-        raw = message.content[0].text.strip()
-        return self._parse_json(raw)
-
-    @staticmethod
-    def _parse_json(raw: str) -> dict:
-        raw = re.sub(r"```(?:json)?", "", raw).strip().rstrip("`").strip()
-        start = raw.find("{")
-        end = raw.rfind("}") + 1
-        if start != -1 and end > start:
-            raw = raw[start:end]
-        return json.loads(raw)
+        return parse_json(message.content[0].text)

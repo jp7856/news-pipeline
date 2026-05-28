@@ -1,15 +1,14 @@
 """EditorAgent — 기사의 문법·적합성·어색함을 검토하고 수정 제안 목록을 반환한다.
 직접 수정하지 않고, 제안만 제공한다."""
 
-import json
 import logging
-import re
 from typing import Callable
 
 import anthropic
 
 from config import CLAUDE_MODEL, SYSTEM_PROMPT, LEVEL_CONFIG
 from models import ArticleResult, EditingSuggestion, Level
+from agents.sub_agents.utils import parse_json
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +78,4 @@ If there are no issues, return: {{"suggestions": []}}"""
             system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
             messages=[{"role": "user", "content": prompt}],
         )
-        raw = message.content[0].text
-        raw = re.sub(r"```(?:json)?", "", raw).strip().rstrip("`").strip()
-        start, end = raw.find("{"), raw.rfind("}") + 1
-        if start != -1 and end > start:
-            raw = raw[start:end]
-        return json.loads(raw)
+        return parse_json(message.content[0].text)

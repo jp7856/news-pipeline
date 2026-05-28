@@ -1,14 +1,13 @@
 """WriterAgent — 토픽을 받아 레벨에 맞는 NE Times 기사를 작성한다."""
 
-import json
 import logging
-import re
 from typing import Callable
 
 import anthropic
 
 from config import ANTHROPIC_API_KEY, CLAUDE_MODEL, SYSTEM_PROMPT, LEVEL_CONFIG
 from models import ArticleResult, Level, Section
+from agents.sub_agents.utils import parse_json
 
 logger = logging.getLogger(__name__)
 
@@ -98,12 +97,4 @@ Respond in this exact JSON format:
             system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
             messages=[{"role": "user", "content": prompt}],
         )
-        return _parse_json(message.content[0].text)
-
-
-def _parse_json(raw: str) -> dict:
-    raw = re.sub(r"```(?:json)?", "", raw).strip().rstrip("`").strip()
-    start, end = raw.find("{"), raw.rfind("}") + 1
-    if start != -1 and end > start:
-        raw = raw[start:end]
-    return json.loads(raw)
+        return parse_json(message.content[0].text)
