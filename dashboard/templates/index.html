@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>NE Times Content Pipeline</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+    header{background:#1e293b;padding:14px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #334155}
+    header h1{font-size:1.15rem;font-weight:600}
+    .badge{background:#334155;padding:4px 10px;border-radius:999px;font-size:.75rem}
+    .badge.running{background:#16a34a;animation:pulse 1.5s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+    main{padding:20px;max-width:1300px;margin:0 auto}
+
+    /* Form */
+    .form-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+    input[type=text]{flex:1;min-width:250px;padding:10px 14px;border:1px solid #334155;border-radius:8px;background:#1e293b;color:#e2e8f0;font-size:.9rem}
+    select{padding:10px 14px;border:1px solid #334155;border-radius:8px;background:#1e293b;color:#e2e8f0;font-size:.9rem;min-width:120px}
+    button{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:500}
+    #btn-run{background:#3b82f6;color:white}
+    #btn-run:disabled{background:#475569;cursor:not-allowed}
+
+    /* Tabs */
+    .tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+    .tab{padding:8px 16px;border-radius:8px 8px 0 0;background:#1e293b;color:#94a3b8;cursor:pointer;font-size:.85rem;border:1px solid #334155;border-bottom:none}
+    .tab.active{background:#0f172a;color:#e2e8f0;border-color:#3b82f6;border-bottom:1px solid #0f172a}
+
+    /* Panels */
+    .panel{background:#1e293b;border-radius:0 12px 12px 12px;padding:20px;min-height:300px;display:none;border:1px solid #334155}
+    .panel.active{display:block}
+    .panel h2{font-size:.85rem;font-weight:600;color:#94a3b8;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+
+    /* Article */
+    .article-text{white-space:pre-wrap;line-height:1.8;font-size:.95rem;color:#f1f5f9}
+    .stat{display:inline-block;background:#334155;padding:3px 10px;border-radius:12px;font-size:.75rem;margin-right:6px;margin-bottom:8px}
+    .stat.pass{background:#14532d;color:#4ade80}
+    .stat.fail{background:#7f1d1d;color:#fca5a5}
+
+    /* Lists */
+    .vocab-tag{display:inline-block;background:#1e3a5f;color:#93c5fd;padding:4px 12px;border-radius:999px;font-size:.8rem;margin:3px 4px 3px 0}
+    .source-link{color:#60a5fa;font-size:.85rem;text-decoration:none;display:block;margin:4px 0}
+    .source-link:hover{text-decoration:underline}
+
+    /* Checklist */
+    .check-item{padding:8px 0;border-bottom:1px solid #1e293b;font-size:.85rem}
+    .check-item .status{font-weight:700;margin-right:6px}
+    .check-item .status.pass{color:#4ade80}
+    .check-item .status.fail{color:#f87171}
+
+    /* Suggestions */
+    .suggestion{padding:12px 0;border-bottom:1px solid #334155}
+    .suggestion .orig{color:#fbbf24;font-size:.85rem;font-style:italic}
+    .suggestion .arrow{color:#64748b;margin:4px 0;font-size:.8rem}
+    .suggestion .sugg{color:#4ade80;font-size:.85rem}
+    .suggestion .reason{color:#94a3b8;font-size:.8rem;margin-top:4px}
+
+    /* Crossword */
+    .cw-card{background:#0f172a;border-radius:8px;padding:14px;margin-bottom:10px}
+    .cw-word{font-weight:700;color:#f59e0b;font-size:.95rem}
+    .cw-korean{color:#94a3b8;font-size:.8rem;margin-left:8px}
+    .cw-sentence{font-size:.85rem;margin:4px 0 0 12px;line-height:1.5}
+    .cw-label{color:#64748b;font-size:.75rem;font-weight:600;margin-right:6px}
+
+    /* Workbook */
+    .wb-set{background:#0f172a;border-radius:8px;padding:16px;margin-bottom:14px}
+    .wb-set h3{font-size:.9rem;color:#f59e0b;margin-bottom:10px}
+    .wb-section{margin-bottom:12px}
+    .wb-section h4{font-size:.8rem;color:#94a3b8;margin-bottom:6px;text-transform:uppercase}
+    .wb-section p,.wb-section li{font-size:.85rem;line-height:1.6}
+    .wb-section ul{padding-left:18px}
+
+    /* Log */
+    #log-box{height:200px;overflow-y:auto;font-family:monospace;font-size:.8rem;line-height:1.5;color:#a3e635;background:#0f172a;border-radius:8px;padding:12px}
+    #log-box p{margin:1px 0}
+
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>NE Times Content Pipeline</h1>
+    <span class="badge" id="status-badge">Ready</span>
+  </header>
+
+  <main>
+    <div class="form-row">
+      <input type="text" id="topic" placeholder="Enter topic (e.g. Climate change and young activists)">
+      <select id="level">
+        {% for lv in levels %}
+        <option value="{{lv.value}}" {% if lv.value == 'junior' %}selected{% endif %}>{{lv.label}}</option>
+        {% endfor %}
+      </select>
+      <select id="section">
+        {% for sc in sections %}
+        <option value="{{sc.value}}">{{sc.label}}</option>
+        {% endfor %}
+      </select>
+      <button id="btn-run" onclick="runPipeline()">Generate</button>
+    </div>
+
+    <!-- Log -->
+    <div id="log-box" class="hidden"></div>
+
+    <!-- Result area -->
+    <div id="result-area" class="hidden">
+      <div class="tabs">
+        <div class="tab active" data-tab="article">Article</div>
+        <div class="tab" data-tab="plagiarism">Plagiarism</div>
+        <div class="tab" data-tab="editing">Editing</div>
+        <div class="tab" data-tab="crossword">Crossword</div>
+        <div class="tab" data-tab="workbook">Workbook</div>
+      </div>
+
+      <div class="panel active" id="panel-article"></div>
+      <div class="panel" id="panel-plagiarism"></div>
+      <div class="panel" id="panel-editing"></div>
+      <div class="panel" id="panel-crossword"></div>
+      <div class="panel" id="panel-workbook"></div>
+    </div>
+  </main>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+    const logBox = document.getElementById("log-box");
+    const badge = document.getElementById("status-badge");
+    const btnRun = document.getElementById("btn-run");
+
+    // Tab switching
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById("panel-" + tab.dataset.tab).classList.add("active");
+      });
+    });
+
+    socket.on("log", ({message}) => {
+      logBox.classList.remove("hidden");
+      const p = document.createElement("p");
+      p.textContent = message;
+      logBox.appendChild(p);
+      logBox.scrollTop = logBox.scrollHeight;
+    });
+
+    socket.on("pipeline_done", ({result}) => {
+      setRunning(false);
+      renderResult(result);
+    });
+
+    socket.on("pipeline_error", ({error}) => {
+      setRunning(false);
+      alert("Error: " + error);
+    });
+
+    async function runPipeline() {
+      const topic = document.getElementById("topic").value.trim();
+      if (!topic) { alert("Please enter a topic."); return; }
+
+      setRunning(true);
+      logBox.innerHTML = "";
+      logBox.classList.remove("hidden");
+      document.getElementById("result-area").classList.add("hidden");
+
+      const resp = await fetch("/api/run", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          topic,
+          level: document.getElementById("level").value,
+          section: document.getElementById("section").value,
+        }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json();
+        alert("Error: " + data.error);
+        setRunning(false);
+      }
+    }
+
+    function setRunning(running) {
+      btnRun.disabled = running;
+      badge.textContent = running ? "Running..." : "Ready";
+      badge.className = "badge" + (running ? " running" : "");
+    }
+
+    function renderResult(r) {
+      document.getElementById("result-area").classList.remove("hidden");
+
+      // Article
+      document.getElementById("panel-article").innerHTML = `
+        <h2>Article</h2>
+        <div style="margin-bottom:10px">
+          <span class="stat">${r.level.toUpperCase()}</span>
+          <span class="stat">${r.section}</span>
+          <span class="stat">${r.article.word_count} words</span>
+        </div>
+        <div class="article-text">${esc(r.article.text)}</div>
+        <h2 style="margin-top:20px">Vocabulary</h2>
+        <div>${r.article.vocabulary.map(w => `<span class="vocab-tag">${esc(w)}</span>`).join("")}</div>
+        <h2 style="margin-top:16px">Sources</h2>
+        ${r.article.sources.map(s => `<a class="source-link" href="${esc(s)}" target="_blank">${esc(s)}</a>`).join("")}
+      `;
+
+      // Plagiarism
+      const pStatus = r.plagiarism.passed;
+      let checkHtml = "";
+      for (const [key, val] of Object.entries(r.plagiarism.checklist)) {
+        const st = val.pass ? "pass" : "fail";
+        checkHtml += `<div class="check-item"><span class="status ${st}">${val.pass ? "PASS" : "FAIL"}</span>${esc(key)}: ${esc(val.note || "")}</div>`;
+      }
+      document.getElementById("panel-plagiarism").innerHTML = `
+        <h2>Plagiarism Check</h2>
+        <span class="stat ${pStatus ? 'pass' : 'fail'}">${pStatus ? 'ALL PASSED' : 'WARNING'}</span>
+        <div style="margin-top:12px">${checkHtml}</div>
+        ${r.plagiarism.notes ? `<p style="margin-top:12px;color:#94a3b8;font-size:.85rem">${esc(r.plagiarism.notes)}</p>` : ""}
+      `;
+
+      // Editing
+      let editHtml = r.editing.length === 0 ? '<p style="color:#4ade80">No issues found.</p>' : "";
+      for (const s of r.editing) {
+        editHtml += `<div class="suggestion">
+          <div class="orig">"${esc(s.original)}"</div>
+          <div class="arrow">&#8595;</div>
+          <div class="sugg">"${esc(s.suggestion)}"</div>
+          <div class="reason">${esc(s.reason)}</div>
+        </div>`;
+      }
+      document.getElementById("panel-editing").innerHTML = `
+        <h2>Editing Suggestions <span class="stat">${r.editing.length} items</span></h2>
+        ${editHtml}
+      `;
+
+      // Crossword
+      let cwHtml = "";
+      for (const c of r.crossword) {
+        cwHtml += `<div class="cw-card">
+          <span class="cw-word">${esc(c.word)}</span><span class="cw-korean">${esc(c.korean_definition)}</span>
+          <div class="cw-sentence"><span class="cw-label">B1</span>${esc(c.sentence_b1)}</div>
+          <div class="cw-sentence"><span class="cw-label">B1-B2</span>${esc(c.sentence_b1_b2)}</div>
+        </div>`;
+      }
+      document.getElementById("panel-crossword").innerHTML = `
+        <h2>Crossword Sentences <span class="stat">${r.crossword.length} pairs</span></h2>
+        ${cwHtml}
+      `;
+
+      // Workbook
+      let wbHtml = "";
+      for (const w of r.workbook) {
+        wbHtml += `<div class="wb-set">
+          <h3>Set ${w.set_number}</h3>
+          <div class="wb-section">
+            <h4>Vocabulary Activity</h4>
+            <p>${esc(w.vocabulary_activity)}</p>
+          </div>
+          <div class="wb-section">
+            <h4>True / False (${w.true_false.length})</h4>
+            <ul>${w.true_false.map(tf => `<li>${esc(tf.sentence)} <strong>[${tf.answer}]</strong></li>`).join("")}</ul>
+          </div>
+          <div class="wb-section">
+            <h4>Comprehension Questions (${w.comprehension_questions.length})</h4>
+            <ul>${w.comprehension_questions.map(q => `<li>${esc(q)}</li>`).join("")}</ul>
+          </div>
+          <div class="wb-section">
+            <h4>Discussion Questions (${w.discussion_questions.length})</h4>
+            <ul>${w.discussion_questions.map(q => `<li>${esc(q)}</li>`).join("")}</ul>
+          </div>
+        </div>`;
+      }
+      document.getElementById("panel-workbook").innerHTML = `
+        <h2>Workbook Activities <span class="stat">${r.workbook.length} sets</span></h2>
+        ${wbHtml}
+      `;
+    }
+
+    function esc(s) {
+      if (!s) return "";
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+  </script>
+</body>
+</html>
