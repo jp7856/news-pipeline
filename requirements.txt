@@ -1,20 +1,10 @@
 # AI
 anthropic>=0.40.0
 
-# 웹 스크래핑
-feedparser>=6.0.10
-requests>=2.31.0
-beautifulsoup4>=4.12.0
-lxml>=5.0.0
-
-# Google Sheets
-gspread>=6.0.0
-google-auth>=2.25.0
-
 # 웹 대시보드
 flask>=3.0.0
 flask-socketio>=5.3.6
 python-dotenv>=1.0.0
 
-# 유틸리티
-python-dateutil>=2.8.2
+# HTTP
+requests>=2.31.0
