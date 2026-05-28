@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import Callable
 
 from agents import ContentProducerAgent
+from agents.translator import TranslatorAgent
 from models import ContentPackage, Level, Section
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,10 @@ class Orchestrator:
         producer = ContentProducerAgent(log_callback=self._log)
         package = producer.run(topic, level, section)
 
+        # ── Agent 2: 한국어 번역 ──────────────────────────────────
+        translator = TranslatorAgent(log_callback=self._log)
+        package = translator.run(package)
+
         # ── 결과 요약 ─────────────────────────────────────────────
         duration = (datetime.now() - start).seconds
         self._log("")
@@ -61,6 +66,7 @@ class Orchestrator:
         self._log(f"    Edits      : {len(package.editing_suggestions)} suggestions")
         self._log(f"    Crossword  : {len(package.crossword_sentences)} pairs")
         self._log(f"    Workbook   : {len(package.workbook_sets)} sets")
+        self._log(f"    Korean     : {'완료' if package.article.text_ko else '없음'}")
 
         return package
 

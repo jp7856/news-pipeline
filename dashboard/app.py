@@ -104,6 +104,8 @@ def _serialize(pkg: ContentPackage) -> dict:
         "section": pkg.section.value,
         "article": {
             "text": pkg.article.text,
+            "text_ko": pkg.article.text_ko,
+            "summary_ko": pkg.article.summary_ko,
             "word_count": pkg.article.word_count,
             "vocabulary": pkg.article.vocabulary,
             "sources": pkg.article.sources,

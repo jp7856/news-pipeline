@@ -75,10 +75,14 @@ class Article:
 @dataclass
 class ArticleResult:
     """WriterAgent가 생성한 기사"""
-    text: str                          # 완성된 기사 본문
+    text: str                          # 완성된 기사 본문 (영어)
     vocabulary: list[str]              # 추출된 핵심 어휘 5~8개
     sources: list[str]                 # 참고 URL 목록
     word_count: int = 0
+
+    # Agent 2: 번역 결과
+    text_ko: str = ""                  # 한국어 번역 본문
+    summary_ko: str = ""               # 한국어 요약 (2~4문장)
 
     def __post_init__(self):
         if not self.word_count and self.text:

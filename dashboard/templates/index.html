@@ -110,6 +110,7 @@
     <div id="result-area" class="hidden">
       <div class="tabs">
         <div class="tab active" data-tab="article">Article</div>
+        <div class="tab" data-tab="korean">한국어</div>
         <div class="tab" data-tab="plagiarism">Plagiarism</div>
         <div class="tab" data-tab="editing">Editing</div>
         <div class="tab" data-tab="crossword">Crossword</div>
@@ -117,6 +118,7 @@
       </div>
 
       <div class="panel active" id="panel-article"></div>
+      <div class="panel" id="panel-korean"></div>
       <div class="panel" id="panel-plagiarism"></div>
       <div class="panel" id="panel-editing"></div>
       <div class="panel" id="panel-crossword"></div>
@@ -206,6 +208,17 @@
         <div>${r.article.vocabulary.map(w => `<span class="vocab-tag">${esc(w)}</span>`).join("")}</div>
         <h2 style="margin-top:16px">Sources</h2>
         ${r.article.sources.map(s => `<a class="source-link" href="${esc(s)}" target="_blank">${esc(s)}</a>`).join("")}
+      `;
+
+      // Korean
+      document.getElementById("panel-korean").innerHTML = `
+        <h2>한국어 번역</h2>
+        ${r.article.summary_ko ? `
+        <div style="background:#0f172a;border-radius:8px;padding:14px;margin-bottom:16px">
+          <h2 style="margin-bottom:8px">요약</h2>
+          <p style="font-size:.9rem;line-height:1.8;color:#94a3b8">${esc(r.article.summary_ko)}</p>
+        </div>` : ""}
+        <div class="article-text">${esc(r.article.text_ko || "번역 없음")}</div>
       `;
 
       // Plagiarism
